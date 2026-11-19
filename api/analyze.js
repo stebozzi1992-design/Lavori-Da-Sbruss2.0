@@ -1,5 +1,38 @@
 // File: api/analyze.js
-// Motore AI con Groq (gratuito e ultra-veloce, supporta foto e testo)
+// Motore AI con Groq: rileva in automatico i modelli attivi sul tuo account
+
+async function getGroqModels(apiKey) {
+  const res = await fetch('https://api.groq.com/openai/v1/models', {
+    headers: { 'Authorization': `Bearer ${apiKey}` }
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.data || []).map(m => m.id).filter(Boolean);
+}
+
+function pickModel(models, needsVision) {
+  const excluded = ['whisper', 'tts', 'guard', 'embed', 'playai', 'orpheus', 'moderation'];
+  const chatModels = models.filter(id => !excluded.some(ex => id.toLowerCase().includes(ex)));
+
+  if (needsVision) {
+    const visionKeywords = ['vision', 'llama-4', 'maverick', 'scout', 'pixtral', 'vl', 'multimodal'];
+    const visionModel = chatModels.find(id => visionKeywords.some(k => id.toLowerCase().includes(k)));
+    if (visionModel) return visionModel;
+    return null;
+  }
+
+  const preferred = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'qwen',
+    'llama-3'
+  ];
+  for (const pref of preferred) {
+    const found = chatModels.find(id => id.toLowerCase().includes(pref));
+    if (found) return found;
+  }
+  return chatModels[0] || null;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +45,7 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(500).json({
-      error: 'Chiave GROQ_API_KEY non configurata. Aggiungila nelle Environment Variables di Vercel e fai Redeploy.'
+      error: 'Chiave GROQ_API_KEY non configurata su Vercel.'
     });
   }
 
@@ -22,6 +55,17 @@ module.exports = async function handler(req, res) {
     if (!imageBase64 && (!notes || !notes.trim())) {
       return res.status(400).json({
         error: 'Carica una foto oppure descrivi il problema nel campo testo.'
+      });
+    }
+
+    const availableModels = await getGroqModels(apiKey);
+    const chosenModel = pickModel(availableModels, Boolean(imageBase64));
+
+    if (!chosenModel) {
+      return res.status(400).json({
+        error: imageBase64
+          ? 'Nessun modello per le foto è attivo su Groq al momento. Prova a descrivere il problema a parole senza foto.'
+          : 'Nessun modello chat attivo trovato sul tuo account Groq.'
       });
     }
 
@@ -65,7 +109,7 @@ Note dell'utente: ${notes && notes.trim() ? notes.trim() : 'Nessuna nota aggiunt
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: chosenModel,
         temperature: 0.4,
         max_completion_tokens: 1500,
         response_format: { type: 'json_object' },
@@ -80,7 +124,7 @@ Note dell'utente: ${notes && notes.trim() ? notes.trim() : 'Nessuna nota aggiunt
 
     if (!groqResponse.ok) {
       const msg = data?.error?.message || 'Errore nella risposta di Groq.';
-      return res.status(groqResponse.status).json({ error: msg });
+      return res.status(groqResponse.status).json({ error: `${msg} (modello: ${chosenModel})` });
     }
 
     let rawText = data?.choices?.[0]?.message?.content || '';
