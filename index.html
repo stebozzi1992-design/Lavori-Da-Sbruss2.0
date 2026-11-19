@@ -224,5 +224,489 @@
         <!-- Prodotto e Resa -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo di
-              
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo di prodotto</label>
+            <select id="paint-type" onchange="onPaintTypeChange()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white">
+              <option value="10">Idropittura murale (10 m²/L)</option>
+              <option value="12">Smalto per legno / persiane (12 m²/L)</option>
+              <option value="11">Smalto per ferro / metallo (11 m²/L)</option>
+              <option value="8">Pittura per esterni / facciate (8 m²/L)</option>
+              <option value="13">Impregnante per legno (13 m²/L)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Resa per mano (m²/Litro)</label>
+            <input id="paint-yield" type="number" min="2" max="25" step="0.5" value="10" oninput="calcPaint()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        <!-- Mani e Margine -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div>
+            <span class="block text-xs font-semibold text-slate-600 mb-1">Numero di mani</span>
+            <div class="inline-flex gap-1.5">
+              <button type="button" onclick="setCoats(1)" id="coat-1" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">1</button>
+              <button type="button" onclick="setCoats(2)" id="coat-2" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white">2</button>
+              <button type="button" onclick="setCoats(3)" id="coat-3" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700">3</button>
+            </div>
+          </div>
+          <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer pt-4">
+            <input id="paint-margin" type="checkbox" checked onchange="calcPaint()" class="w-4 h-4 accent-teal-700 rounded" />
+            Aggiungi +10% margine sicurezza
+          </label>
+        </div>
+      </div>
+
+      <!-- Riepilogo Calcolo -->
+      <div class="bg-teal-800 text-white rounded-2xl p-5 shadow-md space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs uppercase tracking-wider text-teal-200 font-semibold">Risultato Stimato</span>
+          <button onclick="copyPaintSummary()" class="text-xs font-semibold bg-white/15 hover:bg-white/25 px-3 py-1 rounded-lg">📋 Copia riepilogo</button>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white/10 rounded-xl p-3">
+            <div class="text-xs text-teal-100">Superficie netta</div>
+            <div id="out-sqm" class="text-xl font-bold mt-0.5">0 m²</div>
+          </div>
+          <div class="bg-white/10 rounded-xl p-3">
+            <div class="text-xs text-teal-100">Vernice necessaria</div>
+            <div id="out-liters" class="text-xl font-bold mt-0.5">0 L</div>
+          </div>
+        </div>
+        <div class="bg-white/10 rounded-xl p-3 text-xs space-y-1">
+          <div><span class="font-semibold text-teal-200">Barattoli consigliati:</span> <span id="out-buckets">-</span></div>
+          <div><span class="font-semibold text-teal-200">Fissativo / Primer stimato:</span> <span id="out-primer">-</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SCHEDA 3: GUIDE IDRAULICA ===================== -->
+    <section id="tab-plumb" class="hidden space-y-3">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <h2 class="text-base font-bold text-slate-900">Guide di Piccola Idraulica</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Interventi rapidi spiegati passo passo. Tocca una guida per aprirla e spuntare i passaggi.</p>
+      </div>
+      <div id="plumb-guides-list" class="space-y-3"></div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-3xl w-full mx-auto px-4 py-6 text-center text-[11px] text-slate-400">
+    Lavori da Sbruss 2.0 fornisce indicazioni orientative per il fai-da-te. Per impianti elettrici, gas, caldaie o problemi strutturali rivolgiti sempre a un tecnico abilitato.
+  </footer>
+
+  <!-- Toast notifica -->
+  <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg z-50"></div>
+
+  <script>
+    // ===================== STATO GLOBALE =====================
+    let selectedImageBase64 = null;
+    let selectedMimeType = 'image/jpeg';
+    let selectedCategory = 'Muro';
+    let lastShoppingList = [];
+    let paintMode = 'walls';
+    let paintCoats = 2;
+    let walls = [{ w: 4, h: 2.7 }, { w: 3.5, h: 2.7 }];
+
+    // ===================== NAVIGAZIONE =====================
+    function switchTab(tab) {
+      ['ai', 'paint', 'plumb'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('btn-tab-' + t);
+        btn.className = (t === tab ? 'tab-active' : 'tab-inactive') + ' py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5';
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2400);
+    }
+
+    // ===================== SCHEDA 1: ANALISI AI =====================
+    function selectCategory(btn, cat) {
+      selectedCategory = cat;
+      document.querySelectorAll('.cat-pill').forEach(p => {
+        p.className = 'cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700';
+      });
+      btn.className = 'cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-teal-700 text-white';
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const maxDim = 1024;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          selectedImageBase64 = dataUrl.split(',')[1];
+          selectedMimeType = 'image/jpeg';
+          document.getElementById('preview-img').src = dataUrl;
+          document.getElementById('preview-box').classList.remove('hidden');
+          document.getElementById('upload-buttons').classList.add('hidden');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearImage() {
+      selectedImageBase64 = null;
+      document.getElementById('input-camera').value = '';
+      document.getElementById('input-gallery').value = '';
+      document.getElementById('preview-box').classList.add('hidden');
+      document.getElementById('upload-buttons').classList.remove('hidden');
+    }
+
+    async function runAnalysis() {
+      const notes = document.getElementById('ai-notes').value.trim();
+      const errBox = document.getElementById('ai-error');
+      errBox.classList.add('hidden');
+
+      if (!selectedImageBase64 && !notes) {
+        errBox.textContent = 'Scatta/carica una foto oppure scrivi una breve descrizione del problema.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('ai-loading').classList.remove('hidden');
+      document.getElementById('ai-result').classList.add('hidden');
+      document.getElementById('btn-analyze').disabled = true;
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: selectedImageBase64,
+            mimeType: selectedMimeType,
+            category: selectedCategory,
+            notes: notes
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Errore durante la richiesta al server.');
+        }
+
+        renderResult(data);
+      } catch (err) {
+        errBox.textContent = err.message || 'Errore di connessione. Riprova.';
+        errBox.classList.remove('hidden');
+      } finally {
+        document.getElementById('ai-loading').classList.add('hidden');
+        document.getElementById('btn-analyze').disabled = false;
+      }
+    }
+
+    function renderResult(d) {
+      document.getElementById('res-titolo').textContent = d.titolo || 'Guida all\'intervento';
+      document.getElementById('res-diagnosi').textContent = d.diagnosi || '';
+      document.getElementById('res-difficolta').textContent = d.difficolta || '-';
+      document.getElementById('res-tempo').textContent = d.tempo || '-';
+      document.getElementById('res-costo').textContent = d.costo || '-';
+      document.getElementById('res-sicurezza').textContent = d.sicurezza || 'Usa sempre guanti e protezioni adeguate.';
+      document.getElementById('res-pro').textContent = d.consiglio_pro || '';
+
+      // Materiali
+      lastShoppingList = d.materiali || [];
+      const matEl = document.getElementById('res-materiali');
+      matEl.innerHTML = lastShoppingList.map((m, i) => `
+        <li class="flex items-start gap-2.5">
+          <input type="checkbox" id="mat-${i}" onchange="this.nextElementSibling.classList.toggle('check-done', this.checked)" class="mt-1 w-4 h-4 accent-teal-700 rounded shrink-0" />
+          <label for="mat-${i}" class="cursor-pointer text-slate-700">${escapeHtml(m)}</label>
+        </li>
+      `).join('');
+
+      // Attrezzi
+      const attEl = document.getElementById('res-attrezzi');
+      attEl.innerHTML = (d.attrezzi || []).map(a => `
+        <span class="bg-slate-100 text-slate-700 text-xs font-medium px-2.5 py-1 rounded-lg">${escapeHtml(a)}</span>
+      `).join('');
+
+      // Passaggi
+      const pasEl = document.getElementById('res-passaggi');
+      pasEl.innerHTML = (d.passaggi || []).map((p, i) => `
+        <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/70 cursor-pointer">
+          <input type="checkbox" onchange="this.nextElementSibling.classList.toggle('opacity-50', this.checked)" class="mt-1 w-4 h-4 accent-teal-700 rounded shrink-0" />
+          <div>
+            <div class="text-xs font-bold text-teal-800">${i + 1}. ${escapeHtml(p.titolo)}</div>
+            <p class="text-xs sm:text-sm text-slate-700 mt-0.5 leading-relaxed">${escapeHtml(p.descrizione)}</p>
+          </div>
+        </label>
+      `).join('');
+
+      document.getElementById('ai-result').classList.remove('hidden');
+      document.getElementById('ai-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function copyShoppingList() {
+      if (!lastShoppingList.length) return;
+      const text = 'Lista della spesa Lavori da Sbruss 2.0:\n' + lastShoppingList.map(m => '- ' + m).join('\n');
+      navigator.clipboard.writeText(text).then(() => showToast('Lista della spesa copiata!'));
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    }
+
+    // ===================== SCHEDA 2: CALCOLA VERNICE =====================
+    function setPaintMode(mode) {
+      paintMode = mode;
+      document.getElementById('paint-walls-box').classList.toggle('hidden', mode !== 'walls');
+      document.getElementById('paint-total-box').classList.toggle('hidden', mode !== 'total');
+      document.getElementById('mode-walls').className = mode === 'walls' ? 'bg-white shadow-sm text-teal-800 font-semibold text-xs py-2 rounded-lg' : 'text-slate-600 font-semibold text-xs py-2 rounded-lg';
+      document.getElementById('mode-total').className = mode === 'total' ? 'bg-white shadow-sm text-teal-800 font-semibold text-xs py-2 rounded-lg' : 'text-slate-600 font-semibold text-xs py-2 rounded-lg';
+      calcPaint();
+    }
+
+    function renderWalls() {
+      const container = document.getElementById('walls-list');
+      container.innerHTML = walls.map((wall, idx) => `
+        <div class="grid grid-cols-12 gap-2 items-end">
+          <div class="col-span-5">
+            <label class="block text-[11px] text-slate-500">Parete ${idx + 1} - Largh. (m)</label>
+            <input type="number" min="0" step="0.1" value="${wall.w}" oninput="walls[${idx}].w=parseFloat(this.value)||0;calcPaint()" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
+          </div>
+          <div class="col-span-5">
+            <label class="block text-[11px] text-slate-500">Altezza (m)</label>
+            <input type="number" min="0" step="0.1" value="${wall.h}" oninput="walls[${idx}].h=parseFloat(this.value)||0;calcPaint()" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
+          </div>
+          <div class="col-span-2">
+            ${walls.length > 1 ? `<button onclick="removeWall(${idx})" class="w-full py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-bold">✕</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+      calcPaint();
+    }
+
+    function addWall() {
+      walls.push({ w: 3, h: 2.7 });
+      renderWalls();
+    }
+
+    function removeWall(idx) {
+      walls.splice(idx, 1);
+      renderWalls();
+    }
+
+    function onPaintTypeChange() {
+      document.getElementById('paint-yield').value = document.getElementById('paint-type').value;
+      calcPaint();
+    }
+
+    function setCoats(n) {
+      paintCoats = n;
+      [1, 2, 3].forEach(c => {
+        document.getElementById('coat-' + c).className = c === n
+          ? 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white'
+          : 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700';
+      });
+      calcPaint();
+    }
+
+    function suggestBuckets(liters) {
+      if (liters <= 0) return '-';
+      const sizes = [14, 10, 5, 2.5, 0.75];
+      let rem = liters;
+      const chosen = [];
+      for (const s of sizes) {
+        while (rem >= s * 0.85) {
+          chosen.push(s);
+          rem -= s;
+        }
+      }
+      if (rem > 0.05) chosen.push(0.75);
+      const counts = {};
+      chosen.forEach(s => counts[s] = (counts[s] || 0) + 1);
+      return Object.entries(counts).map(([s, c]) => `${c} × ${s}L`).join(' + ');
+    }
+
+    function calcPaint() {
+      let sqm = 0;
+      if (paintMode === 'walls') {
+        const gross = walls.reduce((acc, w) => acc + (w.w * w.h), 0);
+        const doors = (parseFloat(document.getElementById('deduct-doors').value) || 0) * 1.7;
+        const windows = (parseFloat(document.getElementById('deduct-windows').value) || 0) * 1.4;
+        const extra = parseFloat(document.getElementById('deduct-extra').value) || 0;
+        sqm = Math.max(0, gross - doors - windows - extra);
+      } else {
+        sqm = Math.max(0, parseFloat(document.getElementById('total-sqm-input').value) || 0);
+      }
+
+      const yieldVal = Math.max(1, parseFloat(document.getElementById('paint-yield').value) || 10);
+      const margin = document.getElementById('paint-margin').checked ? 1.1 : 1.0;
+      const liters = (sqm * paintCoats / yieldVal) * margin;
+      const primer = sqm > 0 ? (sqm / 12) : 0;
+
+      document.getElementById('out-sqm').textContent = sqm.toFixed(1) + ' m²';
+      document.getElementById('out-liters').textContent = liters.toFixed(2) + ' L';
+      document.getElementById('out-buckets').textContent = suggestBuckets(liters);
+      document.getElementById('out-primer').textContent = primer > 0 ? `circa ${primer.toFixed(1)} L (1 mano)` : '-';
+    }
+
+    function copyPaintSummary() {
+      const sqm = document.getElementById('out-sqm').textContent;
+      const liters = document.getElementById('out-liters').textContent;
+      const buckets = document.getElementById('out-buckets').textContent;
+      const type = document.getElementById('paint-type').selectedOptions[0].text;
+      const text = `Calcolo Vernice Lavori da Sbruss 2.0:\n- Prodotto: ${type}\n- Superficie netta: ${sqm}\n- Mani: ${paintCoats}\n- Vernice stimata: ${liters}\n- Barattoli consigliati: ${buckets}`;
+      navigator.clipboard.writeText(text).then(() => showToast('Riepilogo vernice copiato!'));
+    }
+
+    // ===================== SCHEDA 3: GUIDE IDRAULICA =====================
+    const plumbingGuides = [
+      {
+        id: 'sifone',
+        icon: '🚰',
+        title: 'Cambiare il sifone del lavello',
+        meta: 'Facile · 20-30 min',
+        safety: 'Metti sempre un secchio capiente sotto il sifone prima di svitare le ghiere: rimane sempre acqua stagnante nel tubo.',
+        tools: ['Secchio', 'Straccio', 'Pinza a pappagallo (solo se bloccato)'],
+        parts: ['Sifone nuovo (controlla se attacco da 1"1/4 per bagno o 1"1/2 per cucina)', 'Guarnizioni coniche (di solito incluse)'],
+        steps: [
+          'Posiziona il secchio sotto il sifone e svita a mano le ghiere superiore (sotto la piletta) e laterale (verso il muro).',
+          'Sfila il vecchio sifone e pulisci bene i filetti e l\'imbocco nel muro con uno straccio.',
+          'Inserisci le ghiere e le guarnizioni coniche sul nuovo sifone (il lato stretto della guarnizione va verso l\'interno del raccordo).',
+          'Avvita tutto saldamente a mano senza forzare con pinze sulla plastica.',
+          'Apri il rubinetto per 2 minuti e controlla con carta assorbente asciutta che non ci siano gocciolamenti.'
+        ]
+      },
+      {
+        id: 'miscelatore',
+        icon: '🚿',
+        title: 'Sostituire un miscelatore (rubinetto)',
+        meta: 'Media · 45-60 min',
+        safety: 'Chiudi prima i due rubinetti filtro sotto il lavello (o la valvola generale) e apri il rubinetto per scaricare la pressione.',
+        tools: ['Chiave fissa o regolabile (10/12 e 19 mm)', 'Chiave a tubo per rubinetti', 'Torcia', 'Secchio e straccio'],
+        parts: ['Nuovo miscelatore con flessibili e kit di fissaggio', 'Guarnizioni in fibra/gomma da 3/8"'],
+        steps: [
+          'Chiudi acqua calda e fredda sotto il lavello e apri la leva del rubinetto per svuotare i tubi.',
+          'Svita i due flessibili dai rubinetti a muro usando una chiave fissa.',
+          'Da sotto il lavello svita il dado/staffa a ferro di cavallo che blocca il vecchio miscelatore e sfilalo dall\'alto.',
+          'Pulisci la base del foro sul lavello, inserisci il nuovo miscelatore con la sua guarnizione di base e bloccalo da sotto.',
+          'Collega i flessibili (calda a sinistra, fredda a destra), riapri lentamente l\'acqua e verifica la tenuta.'
+        ]
+      },
+      {
+        id: 'flessibile',
+        icon: '💧',
+        title: 'Flessibile o raccordo che gocciola',
+        meta: 'Facile · 15 min',
+        safety: 'Chiudi l\'acqua prima di svitare qualsiasi raccordo in pressione, altrimenti uscirà un getto forte.',
+        tools: ['Chiave regolabile o chiave fissa (19 mm)', 'Straccio', 'Nastro in teflon (solo su filetti senza guarnizione)'],
+        parts: ['Guarnizione nuova da 3/8" o 1/2"', 'Eventuale flessibile inox nuovo della stessa lunghezza'],
+        steps: [
+          'Chiudi il rubinetto di arresto a muro e asciuga bene la zona per capire esattamente da dove esce la goccia.',
+          'Svita il dado del flessibile e controlla la guarnizione interna: se è schiacciata o screpolata, sostituiscila.',
+          'Se la perdita viene dalla treccia metallica del flessibile, va sostituito l\'intero flessibile.',
+          'Riavvita il dado a mano finché gira libero, poi dai un ultimo quarto/mezzo giro con la chiave senza esagerare.',
+          'Riapri l\'acqua e asciuga con un fazzoletto di carta per verificare che resti perfettamente asciutto.'
+        ]
+      },
+      {
+        id: 'wc',
+        icon: '🚽',
+        title: 'Cassetta WC che perde acqua nel water',
+        meta: 'Media · 30-45 min',
+        safety: 'Chiudi il rubinetto di carico dell\'acqua (dentro la cassetta o a lato del WC) prima di smontare i meccanismi.',
+        tools: ['Guanti in gomma', 'Anticalcare delicato o aceto', 'Spugnetta'],
+        parts: ['Guarnizione di fondo (campana) compatibile con la marca della cassetta', 'Eventuale galleggiante nuovo'],
+        steps: [
+          'Apri il coperchio o la placca a muro e chiudi il rubinettino interno dell\'acqua.',
+          'Osserva il livello: se l\'acqua supera il tubo centrale (troppopieno), il problema è il galleggiante da regolare o pulire.',
+          'Se il livello è normale ma l\'acqua scende comunque nel WC, estrai la campana centrale (di solito ruotandola di un quarto di giro).',
+          'Pulisci dal calcare la sede sul fondo e sostituisci la guarnizione in gomma alla base della campana.',
+          'Rimonta la campana, riapri l\'acqua e verifica che a cassetta piena il flusso si fermi del tutto.'
+        ]
+      }
+    ];
+
+    function renderPlumbingGuides() {
+      const container = document.getElementById('plumb-guides-list');
+      container.innerHTML = plumbingGuides.map(g => `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <button onclick="toggleGuide('${g.id}')" class="w-full p-4 text-left flex items-center justify-between gap-3 hover:bg-slate-50 transition">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">${g.icon}</span>
+              <div>
+                <div class="text-sm font-bold text-slate-900">${g.title}</div>
+                <div class="text-xs text-slate-500">${g.meta}</div>
+              </div>
+            </div>
+            <span id="arrow-${g.id}" class="text-slate-400 text-sm transition-transform">▼</span>
+          </button>
+          <div id="body-${g.id}" class="hidden px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+              <strong>⚠️ Sicurezza:</strong> ${g.safety}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div class="bg-slate-50 rounded-xl p-3">
+                <div class="font-bold text-slate-700 mb-1">🧰 Attrezzi</div>
+                <ul class="list-disc list-inside text-slate-600 space-y-0.5">${g.tools.map(t => `<li>${t}</li>`).join('')}</ul>
+              </div>
+              <div class="bg-slate-50 rounded-xl p-3">
+                <div class="font-bold text-slate-700 mb-1">🛒 Ricambi</div>
+                <ul class="list-disc list-inside text-slate-600 space-y-0.5">${g.parts.map(p => `<li>${p}</li>`).join('')}</ul>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="text-xs font-bold text-slate-800">Passaggi:</div>
+              ${g.steps.map((s, idx) => `
+                <label class="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer">
+                  <input type="checkbox" onchange="this.nextElementSibling.classList.toggle('check-done', this.checked)" class="mt-0.5 w-4 h-4 accent-teal-700 rounded shrink-0" />
+                  <span><strong>${idx + 1}.</strong> ${s}</span>
+                </label>
+              `).join('')}
+            </div>
+            <button onclick="askAiAboutPlumbing('${g.title.replace(/'/g, "\\'")}')" class="w-full mt-2 bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold text-xs py-2.5 rounded-xl transition">
+              📷 Hai un dubbio o un pezzo diverso? Chiedi all'AI con una foto
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleGuide(id) {
+      const body = document.getElementById('body-' + id);
+      const arrow = document.getElementById('arrow-' + id);
+      body.classList.toggle('hidden');
+      arrow.style.transform = body.classList.contains('hidden') ? '' : 'rotate(180deg)';
+    }
+
+    function askAiAboutPlumbing(title) {
+      switchTab('ai');
+      const pills = document.querySelectorAll('.cat-pill');
+      pills.forEach(p => {
+        if (p.textContent.trim() === 'Idraulica') selectCategory(p, 'Idraulica');
+      });
+      document.getElementById('ai-notes').value = `Ho bisogno di aiuto per: ${title}. Ecco il mio caso: `;
+      document.getElementById('ai-notes').focus();
+    }
+
+    // Inizializzazione
+    renderWalls();
+    renderPlumbingGuides();
+  </script>
+</body>
+</html>
