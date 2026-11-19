@@ -1,1 +1,228 @@
-content://com.google.android.apps.search.assistant.surfaces.voice.robin.fileprovider/attachments/index.html
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lavori da Sbruss 2.0 — Restauro, Vernice e Piccola Idraulica</title>
+  <meta name="description" content="Scatta una foto a un muro, una persiana o un guasto domestico e ottieni subito diagnosi, lista della spesa e guida passo passo." />
+  <meta name="theme-color" content="#0f766e" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    .tab-active { background-color: #0f766e; color: #ffffff; }
+    .tab-inactive { background-color: #f1f5f9; color: #475569; }
+    .check-done { text-decoration: line-through; color: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="bg-teal-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-xl">🛠️</div>
+        <div>
+          <h1 class="text-lg font-bold leading-tight tracking-tight">Lavori da Sbruss 2.0</h1>
+          <p class="text-xs text-teal-100">Riparazioni, vernice e idraulica fai-da-te</p>
+        </div>
+      </div>
+      <span class="text-[11px] font-semibold bg-white/15 px-2.5 py-1 rounded-full">Gratis</span>
+    </div>
+  </header>
+
+  <!-- Navigazione 3 Schede -->
+  <nav class="bg-white border-b border-slate-200 sticky top-[62px] z-20">
+    <div class="max-w-3xl mx-auto px-3 py-2 grid grid-cols-3 gap-2">
+      <button id="btn-tab-ai" onclick="switchTab('ai')" class="tab-active py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5">
+        <span>📷</span><span>Analisi AI</span>
+      </button>
+      <button id="btn-tab-paint" onclick="switchTab('paint')" class="tab-inactive py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5">
+        <span>🎨</span><span>Vernice</span>
+      </button>
+      <button id="btn-tab-plumb" onclick="switchTab('plumb')" class="tab-inactive py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-1.5">
+        <span>🔧</span><span>Idraulica</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Contenuto Principale -->
+  <main class="max-w-3xl w-full mx-auto px-4 py-5 flex-1">
+
+    <!-- ===================== SCHEDA 1: ANALISI AI ===================== -->
+    <section id="tab-ai" class="space-y-4">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Cosa devi sistemare oggi?</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Scatta una foto (muro, persiana, infisso, guasto) oppure descrivi il problema qui sotto.</p>
+        </div>
+
+        <!-- Area Caricamento Foto -->
+        <div class="space-y-2">
+          <div id="preview-box" class="hidden relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+            <img id="preview-img" src="" alt="Anteprima foto" class="w-full max-h-72 object-contain mx-auto" />
+            <button onclick="clearImage()" class="absolute top-2 right-2 bg-slate-900/75 text-white text-xs px-2.5 py-1 rounded-lg font-medium hover:bg-slate-900">
+              ✕ Rimuovi
+            </button>
+          </div>
+
+          <div id="upload-buttons" class="grid grid-cols-2 gap-2.5">
+            <label class="cursor-pointer border-2 border-dashed border-teal-300 bg-teal-50/60 hover:bg-teal-50 rounded-xl p-3.5 text-center transition">
+              <div class="text-2xl mb-1">📸</div>
+              <div class="text-xs font-semibold text-teal-800">Scatta foto</div>
+              <input id="input-camera" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(event)" />
+            </label>
+            <label class="cursor-pointer border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 rounded-xl p-3.5 text-center transition">
+              <div class="text-2xl mb-1">🖼️</div>
+              <div class="text-xs font-semibold text-slate-700">Scegli da galleria</div>
+              <input id="input-gallery" type="file" accept="image/*" class="hidden" onchange="handleFileSelect(event)" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Categoria -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tipo di superficie o lavoro</label>
+          <div id="category-pills" class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="selectCategory(this, 'Muro')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-teal-700 text-white">Muro</button>
+            <button type="button" onclick="selectCategory(this, 'Persiana / Legno')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Persiana / Legno</button>
+            <button type="button" onclick="selectCategory(this, 'Metallo')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Metallo</button>
+            <button type="button" onclick="selectCategory(this, 'Infissi')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Infissi</button>
+            <button type="button" onclick="selectCategory(this, 'Idraulica')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Idraulica</button>
+            <button type="button" onclick="selectCategory(this, 'Altro')" class="cat-pill px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Altro</button>
+          </div>
+        </div>
+
+        <!-- Note opzionali -->
+        <div>
+          <label for="ai-notes" class="block text-xs font-semibold text-slate-600 mb-1">Dettagli o descrizione (opzionale se carichi una foto)</label>
+          <textarea id="ai-notes" rows="3" placeholder="Es: Muro in bagno con pittura che si sfoglia vicino alla finestra, oppure persiana in legno esposta al sole..." class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+        </div>
+
+        <!-- Bottone Analizza -->
+        <button id="btn-analyze" onclick="runAnalysis()" class="w-full bg-teal-700 hover:bg-teal-800 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+          <span>✨ Analizza e crea guida</span>
+        </button>
+
+        <!-- Errore -->
+        <div id="ai-error" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3"></div>
+      </div>
+
+      <!-- Caricamento -->
+      <div id="ai-loading" class="hidden bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-2">
+        <div class="w-8 h-8 border-4 border-teal-200 border-t-teal-700 rounded-full animate-spin mx-auto"></div>
+        <p class="text-sm font-semibold text-slate-700">Sto analizzando il problema...</p>
+        <p class="text-xs text-slate-500">Preparo diagnosi, lista della spesa e passaggi pratici.</p>
+      </div>
+
+      <!-- Risultato AI -->
+      <div id="ai-result" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-3">
+          <h3 id="res-titolo" class="text-lg font-bold text-slate-900"></h3>
+          <p id="res-diagnosi" class="text-sm text-slate-700 leading-relaxed"></p>
+          <div class="grid grid-cols-3 gap-2 pt-1">
+            <div class="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-100">
+              <div class="text-[11px] text-slate-500">Difficoltà</div>
+              <div id="res-difficolta" class="text-xs font-bold text-slate-800 mt-0.5"></div>
+            </div>
+            <div class="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-100">
+              <div class="text-[11px] text-slate-500">Tempo</div>
+              <div id="res-tempo" class="text-xs font-bold text-slate-800 mt-0.5"></div>
+            </div>
+            <div class="bg-slate-50 rounded-xl p-2.5 text-center border border-slate-100">
+              <div class="text-[11px] text-slate-500">Costo stimato</div>
+              <div id="res-costo" class="text-xs font-bold text-slate-800 mt-0.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sicurezza -->
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 items-start">
+          <span class="text-xl">⚠️</span>
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wide text-amber-800">Sicurezza prima di tutto</div>
+            <p id="res-sicurezza" class="text-xs sm:text-sm text-amber-900 mt-0.5"></p>
+          </div>
+        </div>
+
+        <!-- Lista della spesa -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-slate-900">🛒 Lista della spesa</h4>
+            <button onclick="copyShoppingList()" class="text-xs font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-lg hover:bg-teal-100">Copia lista</button>
+          </div>
+          <ul id="res-materiali" class="space-y-2 text-sm"></ul>
+        </div>
+
+        <!-- Attrezzi -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-2.5">
+          <h4 class="text-sm font-bold text-slate-900">🧰 Attrezzi necessari</h4>
+          <div id="res-attrezzi" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+        <!-- Passaggi -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-3">
+          <h4 class="text-sm font-bold text-slate-900">📋 Guida passo passo</h4>
+          <div id="res-passaggi" class="space-y-2.5"></div>
+        </div>
+
+        <!-- Consiglio Pro -->
+        <div class="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex gap-3 items-start">
+          <span class="text-xl">💡</span>
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wide text-teal-800">Consiglio dell'esperto</div>
+            <p id="res-pro" class="text-xs sm:text-sm text-teal-900 mt-0.5"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SCHEDA 2: CALCOLA VERNICE ===================== -->
+    <section id="tab-paint" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Calcolatore Litri di Vernice</h2>
+            <p class="text-xs text-slate-500">Calcola quanta vernice e quanti barattoli comprare.</p>
+          </div>
+        </div>
+
+        <!-- Modalità -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+          <button id="mode-walls" onclick="setPaintMode('walls')" class="bg-white shadow-sm text-teal-800 font-semibold text-xs py-2 rounded-lg">Inserisci Misure</button>
+          <button id="mode-total" onclick="setPaintMode('total')" class="text-slate-600 font-semibold text-xs py-2 rounded-lg">m² Totali</button>
+        </div>
+
+        <!-- Inserimento pareti -->
+        <div id="paint-walls-box" class="space-y-3">
+          <div id="walls-list" class="space-y-2"></div>
+          <button onclick="addWall()" class="text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg">
+            + Aggiungi parete / superficie
+          </button>
+
+          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600">Porte (-1,7 m²)</label>
+              <input id="deduct-doors" type="number" min="0" value="0" oninput="calcPaint()" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600">Finestre (-1,4 m²)</label>
+              <input id="deduct-windows" type="number" min="0" value="0" oninput="calcPaint()" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600">Altri m² da togliere</label>
+              <input id="deduct-extra" type="number" min="0" step="0.5" value="0" oninput="calcPaint()" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Inserimento m² totali -->
+        <div id="paint-total-box" class="hidden">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Superficie totale da verniciare (m²)</label>
+          <input id="total-sqm-input" type="number" min="1" step="0.5" value="30" oninput="calcPaint()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+
+        <!-- Prodotto e Resa -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo di
+              
